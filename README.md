@@ -1,56 +1,28 @@
 # gpuz-exporter
 
-This Python 3 script converts MSI Afterburner Remote Server XML output into Prometheus metric format and serves on port 9183.
+This Python 3 script converts GPU-Z text output into Prometheus metric format and serves on port 9184.
 
 Sample output;
 ```
-$ curl -s http://localhost:9183/metrics | head -3
-# HELP mahm_gpu_temperature GPU temperature
-# TYPE mahm_gpu_temperature gauge
-mahm_gpu_temperature{srcUnits="C",localizedSrcName="GPU temperature",localizedSrcUnits="C",recommendedFormat="%.0f",minLimit="0",maxLimit="100",flags="SHOW_IN_OSD",gpu="0",srcId="0"} 53
+$ curl -s http://localhost:9184/metrics | head -6
+...
+# HELP gpuz_gpu_clock GPU Clock [MHz]
+# TYPE gpuz_gpu_clock gauge
+gpuz_gpu_clock{localizedSrcName="GPU Clock",srcUnits="MHz"} 1785.0
 ```
 
-MSI Afterburner Remote Server provides monitoring data in XML format.
-An old version can be found here: https://download.cnet.com/msi-afterburner-remote-server/3000-20432_4-75871627.html
-The default configuration is in "MSIAfterburnerRemoteServer.exe.config" file with these details;
-```
-address: http://localhost:82/mahm
-username: MSIAfterburner
-password: 17cc95b4017d496f82
-```
+GPU-Z provides monitoring data in text format.
 
-Sample XML output;
+Newest version can be found here: https://www.techpowerup.com/download/techpowerup-gpu-z/
+
+Sample text output;
 ```
-$ curl -s -u "MSIAfterburner:17cc95b4017d496f82" http://localhost:82/mahm
-<?xml version="1.0" encoding="utf-8"?>
-<HardwareMonitor>
-	<HardwareMonitorHeader>
-		<signature>1296123981</signature>
-		<version>131072</version>
-		<headerSize>32</headerSize>
-		<entryCount>25</entryCount>
-		<entrySize>1324</entrySize>
-		<time>1705094555</time>
-		<gpuEntryCount>1</gpuEntryCount>
-		<gpuEntrySize>1304</gpuEntrySize>
-	</HardwareMonitorHeader>
-	<HardwareMonitorEntries>
-		<HardwareMonitorEntry>
-			<srcName>GPU temperature</srcName>
-			<srcUnits>C</srcUnits>
-			<localizedSrcName>GPU temperature</localizedSrcName>
-			<localizedSrcUnits>C</localizedSrcUnits>
-			<recommendedFormat>%.0f</recommendedFormat>
-			<data>44</data>
-			<minLimit>0</minLimit>
-			<maxLimit>100</maxLimit>
-			<flags>SHOW_IN_OSD</flags>
-			<gpu>0</gpu>
-			<srcId>0</srcId>
-		</HardwareMonitorEntry>
+$ head -2 gpuz.txt
+        Date        , GPU Clock [MHz] , Memory Clock [MHz] , GPU Temperature [°C] , Hot Spot [°C] , Memory Temperature [°C] , Fan 1 Speed (%) [%] , Fan 1 Speed (RPM) [RPM] , Fan 2 Speed (%) [%] , Fan 2 Speed (RPM) [RPM] , Memory Used [MB] , GPU Load [%] , Memory Controller Load [%] , Video Engine Load [%] , Bus Interface Load [%] , Board Power Draw [W] , GPU Chip Power Draw [W] , MVDDC Power Draw [W] , PWR_SRC Power Draw [W] , PWR_SRC Voltage [V] , PCIe Slot Power [W] , PCIe Slot Voltage [V] , 8-Pin #1 Power [W] , 8-Pin #1 Voltage [V] , 8-Pin #2 Power [W] , 8-Pin #2 Voltage [V] , Power Consumption (%) [% TDP] , PerfCap Reason [] , GPU Voltage [V] , CPU Temperature [°C] , System Memory Used [MB] ,
+2024-01-14 18:41:07 ,        1785.0   ,           1187.7   ,               48.7   ,        64.1   ,                  58.0   ,                 0   ,                     0   ,                 0   ,                     0   ,           3543   ,          7   ,                        1   ,                   0   ,                    0   ,              114.3   ,                  28.2   ,               59.5   ,                 69.2   ,              12.2   ,              24.5   ,                12.2   ,             41.1   ,               12.2   ,             48.7   ,               12.2   ,                        33.6   ,              16   ,        0.9180   ,               67.5   ,                 17888   ,
 ...
 ```
 
-The tags in XML tree are converted into Prometheus labels.
+The header in file is converted into Prometheus labels.
 
-gpuz_exporter.py file connects to /mahm (probably acronym for MSI Afterburner Hardware Monitor?) on port 82 and reads XML everytime GET /metrics is requested.
+gpuz_exporter.py tails the GPU Z file "GPU-Z Sensor Log.txt" in a separate thread. Everytime GET /metrics is requested, http server publishes the last read values.
